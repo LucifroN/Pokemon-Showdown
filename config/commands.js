@@ -205,19 +205,45 @@ var commands = exports.commands = {
 		}
 		this.sendReply('|raw|'+output);
 	},
+	
+	gdeclarered: 'gdeclare',
+	gdeclaregreen: 'gdeclare',
+	gdeclare: function(target, room, user, connection, cmd) {
+		if (!target) return this.parse('/help gdeclare');
+		if (!this.can('lockdown')) return false;
 
-	ipsearch: function(target, room, user) {
-		if (!this.can('rangeban')) return;
-		var atLeastOne = false;
-		this.sendReply("Users with IP "+target+":");
-		for (var userid in Users.users) {
-			var user = Users.users[userid];
-			if (user.latestIp === target) {
-				this.sendReply((user.connected?"+":"-")+" "+user.name);
-				atLeastOne = true;
+		if (cmd === 'gdeclare'){
+			for (var id in Rooms.rooms) {
+				if (id !== 'global') Rooms.rooms[id].addRaw('<div class="broadcast-blue"><b>'+target+'</b></div>');
 			}
 		}
-		if (!atLeastOne) this.sendReply("No results found.");
+		if (cmd === 'gdeclarered'){
+			for (var id in Rooms.rooms) {
+				if (id !== 'global') Rooms.rooms[id].addRaw('<div class="broadcast-red"><b>'+target+'</b></div>');
+			}
+		}
+		else if (cmd === 'gdeclaregreen'){
+			for (var id in Rooms.rooms) {
+				if (id !== 'global') Rooms.rooms[id].addRaw('<div class="broadcast-green"><b>'+target+'</b></div>');
+			}
+		}
+		this.logEntry(user.name + ' used /gdeclare');
+	},
+
+	declaregreen: 'declarered',
+	declarered: function(target, room, user, connection, cmd) {
+		if (!target) return this.parse('/help declare');
+		if (!this.can('declare', null, room)) return false;
+
+		if (!this.canTalk()) return;
+
+		if (cmd === 'declarered'){
+			this.add('|raw|<div class="broadcast-red"><b>'+target+'</b></div>');
+		}
+		else if (cmd === 'declaregreen'){
+			this.add('|raw|<div class="broadcast-green"><b>'+target+'</b></div>');
+		}
+		this.logModCommand(user.name+' declared '+target);
 	},
 
 	/*********************************************************
@@ -668,8 +694,8 @@ var commands = exports.commands = {
 
 	gennext: function(target, room, user) {
 		if (!this.canBroadcast()) return;
-		this.sendReplyBox('NEXT (also called Gen-NEXT) is a mod that makes changes to the game:<br />' +
-			'- <a href="https://github.com/Zarel/Pokemon-Showdown/blob/master/mods/gennext/README.md">README: overview of NEXT</a><br />' +
+		this.sendReplyBox('Generation NEXT is a mod that makes changes to the game:<br />' +
+			'- <a href="https://github.com/Zarel/Pokemon-Showdown/blob/master/mods/gennext/README.md">README: overview of Gen-NEXT</a><br />' +
 			'Example replays:<br />' +
 			'- <a href="http://pokemonshowdown.com/replay/gennextou-37815908">roseyraid vs Zarel</a><br />' +
 			'- <a href="http://pokemonshowdown.com/replay/gennextou-37900768">QwietQwilfish vs pickdenis</a>');
@@ -1186,6 +1212,10 @@ var commands = exports.commands = {
 		if (target === '&' || target === 'declare' ) {
 			matched = true;
 			this.sendReply('/declare [message] - Anonymously announces a message. Requires: & ~');
+		}
+		if (target === '~' || target === 'gdeclare' ) {
+			matched = true;
+			this.sendReply('/gdeclare [message] - Anonymously announces a message to all rooms. Requires: ~');
 		}
 		if (target === '&' || target === 'potd' ) {
 			matched = true;
