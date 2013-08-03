@@ -114,6 +114,20 @@ var commands = exports.commands = {
 		return this.sendReply("An error occurred while trying to create the room '"+target+"'.");
 	},
 
+	deregisterchatroom: function(target, room, user) {
+		if (!this.can('makeroom')) return;
+		var id = toId(target);
+		var targetRoom = Rooms.get(id);
+		target = targetRoom.title || targetRoom.id;
+		if (!targetRoom) return this.sendReply("The room '"+target+"' doesn't exist.");
+		if (Rooms.global.deregisterChatRoom(id)) {
+			this.sendReply("The room '"+target+"' was deregistered.");
+			this.sendReply("It will be deleted as of the next server restart.");
+			return;
+		}
+		return this.sendReply("The room '"+target+"' isn't registered.");
+	},
+
 	privateroom: function(target, room, user) {
 		if (!this.can('makeroom')) return;
 		if (target === 'off') {
@@ -162,6 +176,7 @@ var commands = exports.commands = {
 		var targetUser = this.targetUser;
 		var name = this.targetUsername;
 		var userid = toId(name);
+		if (!userid || userid === '') return this.sendReply("User '"+name+"' does not exist.");
 
 		if (room.auth[userid] !== '#') return this.sendReply("User '"+name+"' is not a room owner.");
 		if (!this.can('makeroom', null, room)) return false;
@@ -229,6 +244,7 @@ var commands = exports.commands = {
 		var targetUser = this.targetUser;
 		var name = this.targetUsername;
 		var userid = toId(name);
+		if (!userid || userid === '') return this.sendReply("User '"+name+"' does not exist.");
 
 		if (room.auth[userid] !== '%') return this.sendReply("User '"+name+"' is not a room mod.");
 		if (!this.can('roommod', null, room)) return false;
@@ -278,6 +294,7 @@ var commands = exports.commands = {
 		var targetUser = this.targetUser;
 		var name = this.targetUsername;
 		var userid = toId(name);
+		if (!userid || userid === '') return this.sendReply("User '"+name+"' does not exist.");
 
 		if (room.auth[userid] !== '+') return this.sendReply("User '"+name+"' is not a room voice.");
 		if (!this.can('roomvoice', null, room)) return false;
@@ -288,6 +305,10 @@ var commands = exports.commands = {
 		if (room.chatRoomData) {
 			Rooms.global.writeChatRoomData();
 		}
+	},
+
+	autojoin: function(target, room, user, connection) {
+		Rooms.global.autojoinRooms(user, connection)
 	},
 
 	join: function(target, room, user, connection) {
@@ -329,7 +350,10 @@ var commands = exports.commands = {
 		if (!targetUser || !targetUser.connected) {
 			return this.sendReply('User '+this.targetUsername+' not found.');
 		}
-		if (!this.can('warn', targetUser)) return false;
+		if (room.isPrivate && room.auth) {
+			return this.sendReply('You can\'t warn here: This is a privately-owned room not subject to global rules.');
+		}
+		if (!this.can('warn', targetUser, room)) return false;
 
 		this.addModCommand(''+targetUser.name+' was warned by '+user.name+'.' + (target ? " (" + target + ")" : ""));
 		targetUser.send('|c|~|/warn '+target);
@@ -830,7 +854,7 @@ var commands = exports.commands = {
 		if (this.can('hotpatch')) return false;
 		fs.writeFile('data/learnsets.js', 'exports.BattleLearnsets = '+JSON.stringify(BattleLearnsets)+";\n");
 		this.sendReply('learnsets.js saved.');
-	},
+	},	
 
 	disableladder: function(target, room, user) {
 		if (!this.can('disableladder')) return false;
